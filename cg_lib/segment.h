@@ -1,28 +1,39 @@
 #pragma once
 #include "point.h"
 #include "vector.h"
-#include <cmath>
 
 namespace cg {
-    template<typename T>
+    template<typename T, size_t n>
     struct Segment {
-        Point<T> a, b;
+        static_assert(std::is_arithmetic_v<T>, "Coord type is not arithmetic type.");
+        
+        Point<T, n> a, b;
         
         Segment() = default;
-        Segment(const Point<T>& a, const Point<T>& b) : a(a), b(b) {}
+        Segment(const Point<T, n>& a, const Point<T, n>& b) : a(a), b(b) {}
         
-        Vector<T> to_vector() const { return {a, b}; }
-        
-        Point<T> midpoint() const {
-            return {(a.x + b.x) / static_cast<T>(2), (a.y + b.y) / static_cast<T>(2)};
+        Vector<T, n> to_vector() const { 
+            return (b - a); 
         }
         
-        T length_sq() const {
-            T dx = b.x - a.x;
-            T dy = b.y - a.y;
-            return dx * dx + dy * dy;
+        Point<T, n> midpoint() const {
+            Point<T, n> result;
+            for (size_t i = 0; i < n; ++i) {
+                result[i] = (a[i] + b[i]) / static_cast<T>(2);
+            }
+            return result;
+        }
+
+        double length() const { 
+            return to_vector().length(); 
         }
         
-        double length() const { return std::sqrt(static_cast<double>(length_sq())); }
+        bool operator==(const Segment& other) const {
+            return a == other.a && b == other.b;
+        }
+        
+        bool operator!=(const Segment& other) const {
+            return !(*this == other);
+        }
     };
 }

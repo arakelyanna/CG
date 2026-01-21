@@ -1,4 +1,3 @@
-// intersection.h
 #pragma once
 #include "vector.h"
 #include "line.h"
@@ -6,116 +5,82 @@
 #include "ray.h"
 #include <optional>
 #include <cmath>
-#include <vector>
 
 namespace cg {
 
+    // Line-Line (2D)
     template<typename T>
-    std::optional<Point<T>> intersect(const Line<T>& l1, const Line<T>& l2) {
-        T det = l1.dir.cross(l2.dir);
+    std::optional<cg::Point<T, 2>> intersect(const cg::Line<T, 2>& l1, const cg::Line<T, 2>& l2) {
+        // Use orientation (2D cross product) instead of cross_product
+        T det = l1.dir.orientation(l2.dir);
         
-        if (det == 0) return std::nullopt; // Parallel or coincident
+        if (det == 0) return std::nullopt; 
         
-        Vector<T> w(l1.p, l2.p);
-        T t = w.cross(l2.dir) / det;
+        Vector<T, 2> w = l2.p - l1.p;
+        T t = w.orientation(l2.dir) / det;
         
         return l1.point_at(t);
     }
 
+    // Segment-Segment (2D)
     template<typename T>
-    std::optional<Point<T>> intersect(const Segment<T>& s1, const Segment<T>& s2) {
-        Vector<T> d1 = s1.to_vector();
-        Vector<T> d2 = s2.to_vector();
-        Vector<T> w(s1.a, s2.a);
+    bool intersection(const Segment<T, 2>& s1, const Segment<T, 2>& s2) {
+        Vector<T, 2> v1 = s1.to_vector();
+        Vector<T, 2> v2 = s2.to_vector();
         
-        T det = d1.cross(d2);
-        if (det == 0) return std::nullopt;
+        Vector<T, 2> s1a_to_s2a = s2.a - s1.a;
+        Vector<T, 2> s1a_to_s2b = s2.b - s1.a;
         
-        T t1 = w.cross(d2) / det;
-        T t2 = w.cross(d1) / det;
+        T cross1 = v1.orientation(s1a_to_s2a);
+        T cross2 = v1.orientation(s1a_to_s2b);
         
-        if (t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1) {
-            return Point<T>{s1.a.x + d1.x * t1, s1.a.y + d1.y * t1};
-        }
+        Vector<T, 2> s2a_to_s1a = s1.a - s2.a;
+        Vector<T, 2> s2a_to_s1b = s1.b - s2.a;
         
-        return std::nullopt;
+        T cross3 = v2.orientation(s2a_to_s1a);
+        T cross4 = v2.orientation(s2a_to_s1b);
+        
+        return (cross1 * cross2 <= 0) && (cross3 * cross4 <= 0);
     }
-
+    
+    // Line-Ray (2D)
     template<typename T>
-    std::optional<Point<T>> intersect(const Line<T>& line, const Ray<T>& ray) {
-        T det = line.dir.cross(ray.dir);
+    std::optional<cg::Point<T, 2>> intersect(const cg::Line<T, 2>& line, const cg::Ray<T, 2>& ray) {
+        // Use orientation (2D cross product) instead of cross_product
+        T det = line.dir.orientation(ray.dir);
         if (det == 0) return std::nullopt;
         
-        Vector<T> w(line.p, ray.origin);
-        T t_ray = w.cross(line.dir) / det;
+        Vector<T, 2> w = ray.origin - line.p;
+        T t_ray = w.orientation(line.dir) / det;
         
         if (t_ray < 0) return std::nullopt;
         
         return ray.point_at(t_ray);
     }
 
+    // Ray-Line (2D)
     template<typename T>
-    std::optional<Point<T>> intersect(const Ray<T>& ray, const Line<T>& line) {
+    std::optional<cg::Point<T, 2>> intersect(const cg::Ray<T, 2>& ray, const cg::Line<T, 2>& line) {
         return intersect(line, ray);
     }
 
+    // Ray-Segment (2D)
     template<typename T>
-    std::optional<Point<T>> intersect(const Vector<T>& v1, const Vector<T>& v2, 
-                                    const Point<T>& p1 = {0, 0}, 
-                                    const Point<T>& p2 = {0, 0}) {
-        T det = v1.cross(v2);
-        if (det == 0) return std::nullopt;
+    bool intersect(const cg::Ray<T, 2>& ray, const cg::Segment<T, 2>& seg) {
+        Line<T, 2> line = Line<T, 2>::from_points(seg.a, seg.b);
+        auto intersection = intersect(ray, line);
         
-        Vector<T> w(p1, p2);
-        T t = w.cross(v2) / det;
-        
-        return Point<T>{p1.x + v1.x * t, p1.y + v1.y * t};
-    }
-
-    // Convex hull using Graham scan
-    template<typename T>
-    std::vector<Point<T>> convex_hull(std::vector<Point<T>> points) {
-        if (points.size() < 3) return points;
-        
-        // Find lowest point (and leftmost if tie)
-        auto min_it = std::min_element(points.begin(), points.end(),
-            [](const Point<T>& a, const Point<T>& b) {
-                return a.y < b.y || (a.y == b.y && a.x < b.x);
-            });
-        
-        Point<T> pivot = *min_it;
-        
-        // Sort by polar angle
-        std::sort(points.begin(), points.end(),
-            [&pivot](const Point<T>& a, const Point<T>& b) {
-                if (a == pivot) return true;
-                if (b == pivot) return false;
-                
-                Vector<T> va(pivot, a);
-                Vector<T> vb(pivot, b);
-                T cross = va.cross(vb);
-                
-                if (cross == 0) {
-                    return va.length_sq() < vb.length_sq();
-                }
-                return cross > 0;
-            });
-        
-        std::vector<Point<T>> hull;
-        for (const auto& p : points) {
-            while (hull.size() >= 2) {
-                Vector<T> v1(hull[hull.size() - 2], hull[hull.size() - 1]);
-                Vector<T> v2(hull[hull.size() - 1], p);
-                if (v1.cross(v2) <= 0) {
-                    hull.pop_back();
-                } else {
-                    break;
-                }
+        if (intersection.has_value()) {
+            Vector<T, 2> to_pt = intersection.value() - seg.a;
+            Vector<T, 2> seg_vec = seg.to_vector();
+            T t = to_pt.dot_product(seg_vec) / seg_vec.dot_product(seg_vec);
+            
+            if (t >= 0 && t <= 1) {
+                return true;
             }
-            hull.push_back(p);
         }
         
-        return hull;
-    };
+        return false;
+    }
 
-} 
+}

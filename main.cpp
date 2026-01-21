@@ -3,38 +3,41 @@
 
 int main() {
     // Using generic types - int, float, double
-    cg::Point<double> p1(0, 0);
-    cg::Point<double> p2(3, 4);
+    cg::Point<double, 2> p1({0, 0});
+    cg::Point<double, 2> p2({3, 4});
     
-    cg::Vector<double> v1(1, 0);
-    cg::Vector<double> v2(0, 1);
+    cg::Vector<double, 2> v1({1, 0});
+    cg::Vector<double, 2> v2({0, 1});
     
-    std::cout << "Dot product: " << v1.dot(v2) << "\n";
-    std::cout << "Cross product: " << v1.cross(v2) << "\n";
-    std::cout << "Vector length: " << cg::Vector<double>(p1, p2).length() << "\n";
+    std::cout << "Vector v1: " << v1 << "\n";
+    std::cout << "Vector v2: " << v2 << "\n";
+    std::cout << "Dot product: " << v1.dot_product(v2) << "\n";
+    
+    // Cross product only works for 3D vectors
+    cg::Vector<double, 3> v3d_1({1, 0, 0});
+    cg::Vector<double, 3> v3d_2({0, 1, 0});
+    std::cout << "Cross product (3D): " << v3d_1.cross_product(v3d_2) << "\n";
+    
+    // Create vector from two points
+    cg::Vector<double, 2> v_from_points = p2 - p1;
+    std::cout << "Vector from p1 to p2: " << v_from_points << "\n";
+    std::cout << "Vector length: " << v_from_points.length() << "\n";
     
     // Line intersection
-    cg::Line<double> line1(cg::Point<double>(0, 0), cg::Vector<double>(1, 1));
-    cg::Line<double> line2(cg::Point<double>(0, 2), cg::Vector<double>(1, -1));
+    cg::Line<double, 2> line1(cg::Point<double, 2>({0, 0}), cg::Vector<double, 2>({1, 1}));
+    cg::Line<double, 2> line2(cg::Point<double, 2>({0, 2}), cg::Vector<double, 2>({1, -1}));
     
     auto intersection = cg::intersect(line1, line2);
     if (intersection) {
-        std::cout << "Lines intersect at: (" << intersection->x << ", " 
-                  << intersection->y << ")\n";
+        std::cout << "Lines intersect at: " << *intersection << "\n";
     }
     
-    // Segment intersection
-    cg::Segment<double> seg1({0, 0}, {2, 2});
-    cg::Segment<double> seg2({0, 2}, {2, 0});
+    cg::Segment<double, 2> seg1({0, 0}, {2, 2});
+    cg::Segment<double, 2> seg2({0, 2}, {2, 0});
     
-    auto seg_int = cg::intersect(seg1, seg2);
-    if (seg_int) {
-        std::cout << "Segments intersect at: (" << seg_int->x << ", " 
-                  << seg_int->y << ")\n";
-    }
+    std::cout << "Segments intersect: " << (cg::intersection(seg1, seg2) ? "yes" : "no") << "\n";
     
-    // Polygon operations
-    cg::Polygon<double> poly({
+    cg::Polygon<double, 2> poly({
         {0, 0}, {4, 0}, {4, 3}, {0, 3}
     });
     
@@ -42,24 +45,17 @@ int main() {
     std::cout << "Polygon area: " << poly.area() << "\n";
     
     poly.translate({1, 1});
-    poly.scale(2.0);
     
     auto triangles = poly.triangulate();
     std::cout << "Number of triangles: " << triangles.size() << "\n";
+
     
-    // Convex hull
-    std::vector<cg::Point<int>> points = {{0, 0}, {1, 1}, {2, 0}, {1, 2}, {1, 0}};
-    auto hull = cg::convex_hull(points);
-    std::cout << "Convex hull has " << hull.size() << " vertices\n";
-    
-    // Ray-line intersection
-    cg::Ray<double> ray({0, 0}, {1, 1});
-    cg::Line<double> line3({2, 0}, {0, 1});
+    cg::Ray<double, 2> ray({0, 0}, {1, 1});
+    cg::Line<double, 2> line3({2, 0}, {0, 1});
     
     auto ray_int = cg::intersect(ray, line3);
     if (ray_int) {
-        std::cout << "Ray-line intersect at: (" << ray_int->x << ", " 
-                  << ray_int->y << ")\n";
+        std::cout << "Ray-line intersect at: " << *ray_int << "\n";
     }
     
     return 0;

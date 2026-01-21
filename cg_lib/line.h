@@ -1,33 +1,47 @@
 #pragma once
 #include "point.h"
 #include "vector.h"
+#include <type_traits>
+#include <cmath>
+
 namespace cg {
-    template<typename T>
+    template<typename T, size_t n>
     struct Line {
-        Point<T> p;
-        Vector<T> dir;
+        static_assert(std::is_arithmetic_v<T>, "Line template parameter must be an arithmetic type");
         
+        Point<T, n> p;
+        Vector<T, n> dir;
+
         Line() = default;
-        Line(const Point<T>& p, const Vector<T>& dir) : p(p), dir(dir) {}
+        Line(const Point<T, n>& p, const Vector<T, n>& dir) : p(p), dir(dir) {}
         
-        // Static factory method for creating line from two points
-        static Line from_points(const Point<T>& p1, const Point<T>& p2) {
-            return Line(p1, Vector<T>(p2.x - p1.x, p2.y - p1.y));
+        static Line from_points(const Point<T, n>& p1, const Point<T, n>& p2) {
+            return Line(p1, p2 - p1);
         }
         
-        Point<T> point_at(T t) const { return {p.x + dir.x * t, p.y + dir.y * t}; }
-        
-        T side(const Point<T>& pt) const {
-            Vector<T> v(p, pt);
-            return dir.cross(v);
+        Point<T, n> point_at(T t) const { 
+            return p + (dir * t);
         }
         
-        bool contains(const Point<T>& pt, T epsilon = 1e-9) const {
-            return std::abs(side(pt)) <= epsilon;
+        Vector<T, n> direction() const {
+            return dir;
         }
         
-        bool is_parallel(const Line& other, T epsilon = 1e-9) const {
-            return std::abs(dir.cross(other.dir)) <= epsilon;
+        bool contains(const Point<T, n>& pt) const {
+            Vector<T, n> v = pt - p;
+            Vector<T, n> normalized_dir = dir.normalize();
+            Vector<T, n> projected = normalized_dir * (v.dot_product(normalized_dir));
+            return (v - projected).length() <= Coord<T>::tolerance;
+        }
+        
+        bool is_parallel(const Line& other) const {
+            T dot_prod = dir.dot_product(other.dir);
+            T len_product = dir.length() * other.dir.length();
+            return std::abs(std::abs(dot_prod) - len_product) <= Coord<T>::tolerance;
+        }
+        
+        bool operator==(const Line& other) const {
+            return p == other.p && dir.normalize().dot_product(other.dir.normalize()) > 0;
         }
     };
 }
